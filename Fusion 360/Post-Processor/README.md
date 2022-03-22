@@ -69,7 +69,7 @@ Here we will try to go through all of them with the needed explanations to go al
 
 - ### Properties UI Improvements
 
-    To make a better user interface, the custom properties (as the custom *feed rate* one) have been upgraded to a programming object. This change allows **SM2.0 (NrvO).cps** to display proper properties names and tooltips that popup when hovered with the mouse, displayig additiona information and description for each property.
+    To make a better user interface, the custom properties (as the custom *feed rate* one) have been upgraded to a programming object. This change allows **SM2.0 (NrvO).cps** to display proper properties names and tooltips that popup when hovered with the mouse, displayig additional information and a description for each property.
 
 - ### Post-Processor Information
 
