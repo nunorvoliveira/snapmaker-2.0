@@ -1,0 +1,796 @@
+/* POST DESCRIPTION, INFORMATION, VERSION HISTORY
+
+    LICENSE: This file is distributed under GNU General Public License v3.0
+    
+    Fusion 360 post processor configuration file for Snapmaker 2.0 (Marlin flavor)
+
+    Created by Nuno Vaz Oliveira to overcome problems and difficulties from Snapmaker post processor
+
+    VERSION HISTORY
+    ===============
+    20220320.2
+     - Changed the onSection() initial positioning to move Z-axis up first, then move X-axis and Y-axis and then Z-axis down
+
+    20220320.1
+     - Grouped properties in 3 different categories:
+        - Formatting options           (Line numbers, spaces, etc...)
+        - Feed rate manipulation       (Custom feed rate, use it?, use G0, etc...)
+        - Information to add           (Write machine?, Program?, Post?, Warnings?, Extra info?)
+
+    20220319.1
+     - Change feedrate options to a combobox with options:
+        - Use feed rate as output by Fusion 360                   (Do nothing)
+        - Change feed rate to custom valus when retracted         (Replace fusion 360 feed rate with custom value when retracted)
+        - Change G01 to G00 and ignore feed rates when retracted  (Replace fusion 360 G01 moves with G00 moves when retracted)
+
+    20220314.1
+     - Added onDwell(seconds) function as example on Autodesk Post Processor Training Guide
+     - Added the possibility to setup a manual NC command to pause the job with or without raizing the Z
+       axis. The commands are of type Action and the Action text is one of the following:
+        - ACTION_PAUSE           -> Pause the spindle and resume after user confirmation
+        - ACTION_PAUSE_RAISE_Z   -> Pause the spindle, raise Z, and resume after user confirmation
+
+    20220313.1
+     - Added M400 before stopping the spindle to make sure all operations completed successfully
+     - Implemented tool rotation to support both CW and CCW tools as defined on Fusion 360
+     - Added new option on Fusion 360 to allow user to decide if program information shoud be added
+     - Added new option on Fusion 360 to allow user to decide if operation name shoud be added
+
+    20220312.3
+     - Changed the post to include an option inside Fusion 360 to allow user to remove or
+       not the Fusion 360 rapid move limitation
+     - Added a replacement option to replace G1 with G0 when replacing ther retracted feed
+       rate
+     - Added an option to use additional comments on the file to allow for better
+       understanding of the program execution
+
+    20220312.2
+     - Added post processor information to the comments on the top of the file
+
+    20220312.1
+     - Added a property object with additional information
+     - Changed the properties read mode to be compatible with the new property object
+
+    20220310.1
+     - Added a property to the post processor to allow users to select the desired
+       feed rate for the retracted height. This is changeable on the Fusion 360 post page
+
+    20220302.1
+     - Implemented some code to intercept the retract height and overcome the
+       Fusion 360 rapid move limit to allow it to travel fast at 6000mm/min
+     - Improved the onComment() function to eliminate the Fusion 360 free warning message
+
+    20220301.1
+     - Implemented code to read the defined spindle speed and process this speed to be
+       compatible with the Fusion 360 defined setting.
+
+    20220207.1
+     - Improved the OnClose() code. Tool head does not go to working origin before
+       raising the Z axis as it could hit some clamps
+
+    20220117.1
+     - First contact ever with a post processor and begining of an investigation journey.
+     - Starting to build first functions according to Autodesk Post Processor Training Guide.pdf
+*/
+
+{                                                              // Post processor version in format year month day . version => yyyymmdd.v and author name
+    POST_VERSION                       = "v20220320.2";
+    AUTHOR_NAME                        = "Nuno Vaz Oliveira";
+}
+
+{                                                              // User configuration. Please change only these values on this file
+    MIN_SPINDLE_SPEED                  = "3000";               // Minimum spindle speed. The lower it getsm the less torque. 600 is possible but useless...
+    MAX_SPINDLE_SPEED                  = "12000";              // Maximum spindle speed. On Snapmaker 2.0 this is 12000rpm
+    DWELL_TIME_SPIN_UP                 = "2";                  // Dwell time for spin up in seconds. Used immediately after spindle start
+    DWELL_TIME_SPIN_DOWN               = "3";                  // Dwell time for spin down in seconds. Used immediately after spindle stop
+}
+
+{                                                              // Fusion 360 Kernel Settings
+    allowedCircularPlanes              = 0;                                                                // Not supported by Snapmaker 2.0
+    allowHelicalMoves                  = true;                                                             // Supported by Snapmaker 2.0
+    capabilities                       = CAPABILITY_MILLING;                                               // All that Snapmaker 2.0 can handle
+    certificationLevel                 = 2;                                                                // As recommended on Autodesk Post Processor Training Guide
+    description                        = "Snapmaker 2.0 (Marlin) by " + AUTHOR_NAME;                       // Shows up on Fusion 360 post window
+    extension                          = ".cnc";                                                           // As exported by Luban
+    setCodePage("ascii");                                                                                  // As recommended on Autodesk Post Processor Training Guide
+    highFeedrate                       = 6000;                                                             // Specifies the high feed mapping mode for rapid moves
+    legal                              = "Copyright (C) 2022 " + AUTHOR_NAME;
+    longDescription                    = "Milling post for Snapmaker 2.0" + POST_VERSION + ", created by " + AUTHOR_NAME;
+    maximumCircularRadius              = spatial(1000, MM);                                                // As recommended on Autodesk Post Processor Training Guide
+    maximumCircularSweep               = toRad(180);                                                       // As recommended on Autodesk Post Processor Training Guide
+    minimumCircularSweep               = toRad(0.01);                                                      // As recommended on Autodesk Post Processor Training Guide
+    minimumChordLength                 = spatial(0.01, MM);                                                // As recommended on Autodesk Post Processor Training Guide
+    minimumCircularRadius              = spatial(0.01, MM);                                                // As recommended on Autodesk Post Processor Training Guide
+    minimumRevision                    = 24000;                                                            // As recommended on Autodesk Post Processor Training Guide
+    tolerance                          = spatial(0.002, MM);                                               // As recommended on Autodesk Post Processor Training Guide
+    vendor                             = "Snapmaker";                                                      // Shows up on Fusion 360 post window
+    vendorUrl                          = "http://www.snapmaker.com";
+}
+
+properties = {                                                 // Properties that are changeable on Fusion 360 post process page. New improved version with tooltips and proper writing
+    writeWarnings                      : {
+        title                          : "Write warnings as comments",
+        description                    : "Output comments with warnings for unsupported and ignored functions.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    },
+    writeOperationName                 : {
+        title                          : "Write operation name",
+        description                    : "Output operation name before the operation starts and immediately before spindle turns on.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    },
+    writeProgram                       : {
+        title                          : "Write program information",
+        description                    : "Output additional comments to the file with program name and comments.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    },
+    writeExtraComments                 : {
+        title                          : "Write extra comments",
+        description                    : "Output additional comments to the file to have a better understanding of the post-processor execution steps. Clearing this will produce the cleanest g-code file after the header.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    },
+    writePost                          : {
+        title                          : "Write post-processor",
+        description                    : "Output the post-processor description and version in the header of the code.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        order:0,
+        value                          : true,
+        scope                          : "post"
+    },
+    retractFeedRate                    : {
+        title                          : "Custom feed rate when retracted",
+        description                    : "Enter the feed rate to use when retracted in mm/min. This will avoid slow feedrate on rapid moves of Fusion 360 free. This is ignored if \"2 -> Replace G1 with G0\" is selected.",
+        group                          : "rapidSection",
+        type                           : "integer",
+        range                          : [ 1000 , 7000 ],
+        value                          : 6000,
+        scope                          : "post"
+    },
+    feedRateMode                       : {
+        title                          : "Rapid feed rate mode",
+        description                    : "Selech how to handle the retracted feed rate when retracted. 0 -> Don't change and use Fusion 360 values. 1 -> Use custom feed rate filled below as \"Custom feed rate when retracted\". 2 -> Replace G1 with G0 and ignore feed rates",
+        type                           : "enum",
+        group                          : "rapidSection",
+        values                         : [
+            { title                    : "0 -> Don't change",                id:"0"},
+            { title                    : "1 -> Use custom feed rate",        id:"1"},
+            { title                    : "2 -> Replace G1 with G0",          id:"2"}
+        ],
+        value                          : "0",
+        scope                          : "post"
+    },
+    writeMachine                       : {
+        title                          : "Write machine",
+        description                    : "Output the machine settings in the header of the code.",
+        group                          : "informationSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    },
+    showSequenceNumbers                : {
+        title                          : "Use sequence numbers",
+        description                    : "Use sequence numbers for each block of outputted code.",
+        group                          : "formattingSection",
+        type                           : "boolean",
+        value                          : false,
+        scope                          : "post"
+    },
+    sequenceNumberStart                : {
+        title                          : "Start sequence number",
+        description                    : "The number at which to start the sequence numbers.",
+        group                          : "formattingSection",
+        type                           : "integer",
+        value                          : 10,
+        scope                          : "post"
+    },
+    sequenceNumberIncrement            : {
+        title                          : "Sequence number increment",
+        description                    : "The amount by which the sequence number is incremented by in each block.",
+        group                          : "formattingSection",
+        type                           : "integer",
+        value                          : 1,
+        scope                          : "post"
+    },
+    separateWordsWithSpace             : {
+        title                          : "Separate words with space",
+        description                    : "Adds spaces between words when selected.",
+        group                          : "formattingSection",
+        type                           : "boolean",
+        value                          : true,
+        scope                          : "post"
+    }
+};
+
+groupDefinitions = {                                           // Properties groups for custom post properties above
+    informationSection                 : {
+        title                          : "Information Section",
+        description                    : "Configure the comments added to the post. Machine, post, program, warnings, etc...",
+        collapsed                      : false,
+        order                          : 0
+    },
+        rapidSection                       : {
+        title                          : "Rapid Feed Rate Section",
+        description                    : "Selects what manipulation to add to the feed rate when retracted",
+        collapsed                      : false,
+        order                          : 1,
+    },
+    formattingSection                  : {
+        title                          : "Formatting Section",
+        description                    : "Definitions for spacing, line numbers, increments, etc...",
+        collapsed                      : false,
+        order                          : 2
+    },
+};
+
+{                                                              // Formats, Outputs, Modals and Variables
+    // Linear output and format
+    var gFormat                        = createFormat({prefix:"G", decimals:0});                           // Retrieved from examining Luban files
+    var mFormat                        = createFormat({prefix:"M", decimals:0});                           // Retrieved from examining Luban files
+    var xyzFormat                      = createFormat({decimals:(unit == MM ? 3 : 4), trim:false});        // As recommended on Autodesk Post Processor Training Guide and including extra option as on Snapmaker original post
+    var feedFormat                     = createFormat({decimals:(unit == MM ? 1 : 2)});                    // Retrieved from examining Luban files
+    var secFormat                      = createFormat({decimals:3, forceDecimal:true});                    // As on Snapmaker original post
+    var xOutput                        = createVariable({prefix:"X", force:true}, xyzFormat);              // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    var yOutput                        = createVariable({prefix:"Y", force:true}, xyzFormat);              // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    var zOutput                        = createVariable({prefix:"Z", force:true}, xyzFormat);              // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    var feedOutput                     = createVariable({prefix:"F", force:true}, feedFormat);             // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    // Circular output
+    var iOutput                        = createReferenceVariable({prefix:"I", force:true}, xyzFormat);     // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    var jOutput                        = createReferenceVariable({prefix:"J", force:true}, xyzFormat);     // As recommended on Autodesk Post Processor Training Guide and from examining Luban files
+    // Modals
+    var gMotionModal                   = createModal({force:true}, gFormat);                               // As recommended on Autodesk Post Processor Training Guide
+    var gAbsIncModal                   = createModal({}, gFormat);                                         // As on Snapmaker original post
+    var gUnitModal                     = createModal({}, gFormat);                                         // As on Snapmaker original post
+    // Collected state
+    var sequenceNumber;                                                                                    // As recommended on Autodesk Post Processor Training Guide
+    var currentWorkOffset;                                                                                 // As recommended on Autodesk Post Processor Training Guide
+
+    var pendingRadiusCompensation      = -1;                                                               // As recommended on Autodesk Post Processor Training Guide
+
+    // This variable will read the retrack height to manipulate the output from Fusio 360 free in a way that the
+    // feed speed will be set to the correct value for moves on the retract plane and above
+    var retractHeight                  = 9999;
+
+    // This variable will track the last Z position
+    var lastPositionZ                  = -9999;
+}
+
+function writeBlock() {                                        // Writes the specified block as on Snapmaker original post
+    if (prop_showSequenceNumbers) {
+        writeWords2("N" + sequenceNumber, arguments);
+        sequenceNumber += prop_sequenceNumberIncrement;
+    } else {
+        writeWords(arguments);
+    }
+}
+
+function formatComment(text) {                                 // Formats comments to include a starting semicolon
+    return ";" + text;
+}
+
+function writeComment(text) {                                  // Output a comment
+    writeln(formatComment(text));                              // As recommended on Autodesk Post Processor Training Guide
+}
+
+function onComment(message) {                                  // Process the Manual NC Comment command
+
+    // Splits comments using ; as separator
+    var comments = String(message).split(";");
+    // Allow multiple lines of comments per command
+    for (comment in comments) {
+        // This prevents the warning message from Fusion 360 for Personal Use
+        if ( comments[comment] != "When using Fusion 360 for Personal Use, the feedrate of" && 
+             comments[comment] != "rapid moves is reduced to match the feedrate of cutting" && 
+             comments[comment] != "moves, which can increase machining time. Unrestricted rapid" && 
+             comments[comment] != "moves are available with a Fusion 360 Subscription." ) {
+            // Write the comment to the file
+            writeComment(comments[comment]);
+        }
+    }
+
+}
+
+function onOpen() {                                            // Post processor initialization
+
+    // Read properties from post to internal variables
+    prop_writeWarnings                 = getProperty("writeWarnings");
+    prop_writeOperationName            = getProperty("writeOperationName");
+    prop_writeProgram                  = getProperty("writeProgram");
+    prop_writeExtraComments            = getProperty("writeExtraComments");
+    prop_writePost                     = getProperty("writePost");
+    prop_feedRateMode                  = getProperty("feedRateMode");
+    prop_retractFeedRate               = getProperty("retractFeedRate");
+    prop_writeMachine                  = getProperty("writeMachine");
+    prop_showSequenceNumbers           = getProperty("showSequenceNumbers");
+    prop_sequenceNumberStart           = getProperty("sequenceNumberStart");
+    prop_sequenceNumberIncrement       = getProperty("sequenceNumberIncrement");
+    prop_separateWordsWithSpace        = getProperty("separateWordsWithSpace");
+    // Expand prop_feedRateMode to other variables (this makes the code compatible with previous version where "prop_feedRateMode" wasn't implemented yet
+    prop_useRetractFeedRate            = ( prop_feedRateMode == 1 ? true : false );
+    prop_useG0notG1                    = ( prop_feedRateMode == 2 ? true : false );
+
+    // Process property separateWordsWithSpace
+    if (!prop_separateWordsWithSpace) {
+        setWordSeparator("");
+    }
+
+    // Read property sequenceNumberStart
+    sequenceNumber = prop_sequenceNumberStart;
+
+    // Write program info
+    if (prop_writeProgram) {
+        writeComment(localize("Program"));
+        if (programName) {
+            writeComment(localize(" -> Name") + "        : " + programName);
+        }
+        if (programComment) {
+            writeComment(localize(" -> Comment") + "     : " + programComment);
+        }
+    }
+
+    // Get machine info
+    var description = "Snapmaker 2.0 (Marlin)";
+    var vendor = "Snapmaker";
+    var vendorUrl = "http://www.snapmaker.com";
+    var model = machineConfiguration.getModel();
+
+    // Write machine info
+    if (prop_writeMachine && (vendor || model || description)) {
+        writeComment(localize("Machine"));
+        if (vendor) {
+            writeComment(localize(" -> Vendor") + "      : " + vendor);
+        }
+        if (vendorUrl) {
+            writeComment(localize(" -> Vendor URL") + "  : " + vendorUrl);
+        }
+        if (model) {
+            writeComment(localize(" -> Model") + "       : " + model);
+        }
+        if (description) {
+            writeComment(localize(" -> Description") + " : "  + description);
+        }
+    }
+
+    // Write post info
+    if (prop_writePost) {
+        writeComment(localize("Post-Processor"));
+        writeComment(localize(" -> Author") + "      : "  + AUTHOR_NAME);
+        writeComment(localize(" -> Version") + "     : "  + POST_VERSION);
+        writeComment(localize(" -> Description") + " : "  + longDescription);
+    }
+    if (prop_writeExtraComments) writeln("");
+
+    // Check unit and process it as on Snapmaker original post
+    switch (unit) {
+        case IN:
+            error(localize("Please select millimeters as unit when post processing. Inch mode is not supported."));
+            return;
+        case MM:
+            // Define working unit as millimeters
+            if (prop_writeExtraComments) writeComment(localize("Set units to millimeters"));
+            writeBlock(gUnitModal.format(21));
+            break;
+    }
+
+    // Set absolute coordinates
+    if (prop_writeExtraComments) writeComment(localize("Set working units as absolute positioning system"));
+    writeBlock(gAbsIncModal.format(90));
+
+    // Adds a space between top section and tool paths
+    if (prop_writeExtraComments) writeln("");
+
+    // Forces the output of the linear axes (X, Y, Z) on the next motion block
+    forceXYZ();
+
+}
+
+function onSection() {                                         // Start of an operation
+
+    // Separates this line from the read parameters from the onParameter() function
+    if (prop_writeExtraComments) writeComment("");
+
+    // Writes the comment for the current operation
+    if (prop_writeOperationName) {
+        if (hasParameter("operation-comment")) {
+            var comment = getParameter("operation-comment");
+            if (comment) {
+                writeComment("Operation name: " + comment);
+            }
+        }
+    }
+
+    // Converts the spindle RPM to a correct value between MIN_SPINDLE_SPEED and MAX_SPINDLE_SPEED
+    // and converts it to a percentage
+    var tSpeed = tool.spindleRPM;
+    if (tSpeed < MIN_SPINDLE_SPEED) {
+        tSpeed = MIN_SPINDLE_SPEED;
+    }
+    if (tSpeed > MAX_SPINDLE_SPEED) {
+        tSpeed = MAX_SPINDLE_SPEED;
+    }
+    var tSpeedPercent = tSpeed * 100 / MAX_SPINDLE_SPEED;
+    if (prop_writeExtraComments) writeComment("Set tool speed to " + tool.spindleRPM + "RPM, or " + Math.ceil(tSpeedPercent) + "% in " + ((toolClockWise == 1) ? "CW" : "CCW") + " direction");
+    writeBlock(mFormat.format(4-toolClockWise) + " P" + Math.ceil(tSpeedPercent));
+    // Dwell to allow the spindle to spin up
+    if (prop_writeExtraComments) writeComment(localize("Dwell for " + DWELL_TIME_SPIN_UP + " seconds to allow the spindle to spin up"));
+    writeBlock("G4 S" + DWELL_TIME_SPIN_UP);
+
+    // specifies that the tool has been retracted to the safe plane
+    var retracted = false;
+
+    // Forces the output of the linear axes (X, Y, Z) on the next motion block
+    forceXYZ();
+
+    // pure 3D - This piece of code is from the Autodesk Post Processor Training Guide. Left here as it's also present on Snapmaker original post. Needed? Not sure...
+    var remaining = currentSection.workPlane;
+    if (!isSameDirection(remaining.forward, new Vector(0, 0, 1))) {
+        error(localize("Tool orientation is not supported."));
+        return;
+    }
+    setRotation(remaining);
+
+    // Forces output on all axes and feedrate on the next motion block
+    forceAny();
+
+    // Gets the initial position of the tool path that is about to start
+    var initialPosition = getFramePosition(currentSection.getInitialPosition());
+
+    // Chech if we are not retracted or if it's the first tool path (section) and if so, raises the Z-axis to
+    // the Z value of the starting tool path to prevent tool collision if going to the next starting point diagonally
+    if (!retracted || isFirstSection()) {
+        if (getCurrentPosition().z < initialPosition.z || isFirstSection()) {
+            // Save last Z position (Added by me)
+            lastPositionZ = zOutput.format(initialPosition.z);
+            // Move to starting position
+            writeBlock(gMotionModal.format(0), zOutput.format(initialPosition.z));
+        }
+    }
+
+    // Forces the output of gMotionModal on the next call (Kept from Snapmaker original post)
+    gMotionModal.reset();
+
+    // Save last Z position (Added by me)
+    lastPositionZ = zOutput.format(initialPosition.z);
+    // Move to starting position
+    writeBlock(
+        gAbsIncModal.format(90),
+        gMotionModal.format(0),
+        xOutput.format(initialPosition.x),
+        yOutput.format(initialPosition.y),
+        zOutput.format(initialPosition.z)
+    );
+
+}
+
+function onSectionEnd() {                                      // Ending the Previous Operation
+
+    // Separates this section from next section or from bottom section
+    if (prop_writeExtraComments) writeln("");
+
+    // Forces all axes and the feedrate on the next motion block
+    forceAny();
+
+}
+
+function forceXYZ() {                                          // Forces the output of the linear axes (X, Y, Z) on the next motion block
+
+    // Forces the output of the linear axe X on the next motion block
+    xOutput.reset();
+    // Forces the output of the linear axe Y on the next motion block
+    yOutput.reset();
+    // Forces the output of the linear axe Z on the next motion block
+    zOutput.reset();
+
+}
+
+function forceAny() {                                          // Forces all axes and the feedrate on the next motion block
+
+    // Forces the output of the linear axes (X, Y, Z) on the next motion block
+    forceXYZ();
+    // Forces the output of the feedrate on the next motion block
+    feedOutput.reset();
+
+}
+
+function onDwell(seconds) {                                    // Dwell Manual NC command in seconds instead milliseconds to keep compatibility with Snapmaker original post
+
+    // Check if secconds is excessive and output a warning
+    if (seconds > 99999.999) {
+        warning(localize("Dwelling time is out of range."));
+    }
+    // Clamp secconds between 0.001 and 99999.999 (1 millisecond to 1 day 3 hours 46 minutes and 39.999 seconds)
+    seconds = clamp(0.001, seconds, 99999.999);
+    // Output informative comment
+    if (prop_writeExtraComments) writeComment("Manual command OnDwell was requested for " + seconds + " second(s)");
+    // Execute dwell
+    writeBlock(gFormat.format(4), "S" + secFormat.format(seconds));
+
+}
+
+function onSpindleSpeed(spindleSpeed) {                        // Output changes in the spindle speed during an operation not supported by Snapmaker 2.0
+
+    // Spindle speed change during operation is not supported
+    if (prop_writeWarnings) writeComment("WARNING: Unsupported onSpindleSpeed(spindleSpeed) during toolpath was invoked and ignored");
+
+}
+
+function onParameter(param_name, param_value) {                // This will capture parameters sent to the post-processor and execute needed actions
+
+    // Read parameter "operation:retractHeight_value"
+    // This will be used to increase the feed rate on planes at retracted height or above
+    if (param_name == "operation:retractHeight_value") {
+        retractHeight = param_value;
+        if (prop_writeExtraComments) writeComment("Parameter \"operation:retractHeight_value\" read successfuly with a value of " + retractHeight);
+    }
+
+    // Read parameter "operation:retractHeight_value"
+    // This will be used to have the tool rotating in the correct direction. CW or CCW
+    if (param_name == "operation:tool_clockwise") {
+        toolClockWise = param_value;
+        if (prop_writeExtraComments) writeComment("Parameter \"operation:tool_clockwise\" read successfuly with a value of " + ((toolClockWise == 1) ? "CW" : "CCW"));
+    }
+
+    // Read parameter "action"
+    // This will be used to have special command executed manually
+    if (param_name == "action") {
+        // Checks what parameter was passed
+        switch (param_value) {
+            case "ACTION_PAUSE":               // User passed command to pause the job. M76
+                if (prop_writeExtraComments) writeComment("Manual NC command action \"ACTION_PAUSE\" invoked");
+                if (prop_writeExtraComments) writeComment("Executing job pause");
+                // Write block with Pause command
+                writeBlock(mFormat.format(76));
+                if (prop_writeExtraComments) writeln("");
+                break;
+            case "ACTION_PAUSE_RAISE_Z":      // User passed command to pause the job and raise Z. Raise, M76, Un-Raise
+            if (prop_writeExtraComments) writeComment("Manual NC command action \"ACTION_PAUSE_RAISE_Z\" invoked");
+                if (prop_writeExtraComments) writeComment("Raising Z");
+                // Raises Z axix to Z9999
+                writeBlock(gMotionModal.format(1), zOutput.format(9999), feedOutput.format(200));
+                if (prop_writeExtraComments) writeComment("Executing job pause");
+                // Write block with Pause command
+                writeBlock(mFormat.format(76));
+                if (prop_writeExtraComments) writeComment("Reverting Z to previous location");
+                // Lowers Z axix to last Z value
+                writeBlock(gMotionModal.format(1), lastPositionZ, feedOutput.format(200));
+                if (prop_writeExtraComments) writeln("");
+                break;
+            default:
+                if (prop_writeWarnings) writeComment("WARNING: Unknown action parameter \"" + param_value + "\" was invoked and ignored");
+                if (prop_writeWarnings) writeln("");
+        }
+    }
+
+}
+
+function onRadiusCompensation() {                              // Called when the radius (cutter) compensation mode changes
+
+    // As recommended on Autodesk Post Processor Training Guide
+    pendingRadiusCompensation = radiusCompensation;
+
+}
+
+function onRapid(_x, _y, _z) {                                 // Handles rapid positioning moves (G00) while in 3-axis mode
+
+    // Format tool position for output
+    var x = xOutput.format(_x);
+    var y = yOutput.format(_y);
+    var z = zOutput.format(_z);
+
+    // Ignore if tool does not move
+    if (x || y || z) {
+        // Handle radius compensation
+        if (pendingRadiusCompensation >= 0) {
+            error(localize("Radius compensation mode cannot be changed at rapid traversal."));
+            return;
+        }
+        // Save last Z position (Added by me)
+        if (z) {
+            lastPositionZ = z;
+        }
+        // Output move in rapid mode
+        writeBlock(gMotionModal.format(0), x, y, z);
+        // Forces the output of the feedrate on the next motion block
+        feedOutput.reset();
+    }
+
+}
+
+function onLinear(_x, _y, _z, feed) {                          // Handles linear moves (G01) at a feedrate while in 3-axis mode
+
+    // Checks for retrack to overcome Fusion 360 limitation
+    var isRetractedHeight = false;
+    if (_z >= retractHeight) {
+        isRetractedHeight = true;
+    }
+
+    // Force move when radius compensation changes
+    if (pendingRadiusCompensation >= 0) {
+        // Forces the output of the linear axe X on the next motion block
+        xOutput.reset();
+        // Forces the output of the linear axe Y on the next motion block
+        yOutput.reset();
+    }
+    // Format tool position for output
+    var x = xOutput.format(_x);
+    var y = yOutput.format(_y);
+    var z = zOutput.format(_z);
+    var f = feedOutput.format(feed);
+
+    // This will set the feed value to the specified above "retrctFeedRate"
+    // on planes equal or above the retrached height in Z axis
+    if (isRetractedHeight && !prop_useG0notG1) {
+        if (prop_useRetractFeedRate) {
+            f = feedOutput.format(prop_retractFeedRate);
+        }
+    }
+
+    // Ignore if tool does not move
+    if (x || y || z) {
+        // Handle radius compensation changes
+        if (pendingRadiusCompensation >= 0) {
+            error(localize("Radius compensation mode is not supported."));
+            return;
+        // Output non-compensation change move at feedrate
+        } else {
+            if (isRetractedHeight && prop_useG0notG1) {
+                // Ignore feed rate as we are on retracted height and use G0
+                if (prop_writeExtraComments) writeComment("Ignoring feed rate " + f + " and using G0 instead of G1");
+                // Save last Z position (Added by me)
+                if (z) {
+                    lastPositionZ = z;
+                }
+                // output next block
+                writeBlock(gMotionModal.format(0), x, y, z);
+                // Forces the output of the feedrate on the next motion block
+                feedOutput.reset();
+            } else {
+                if (isRetractedHeight && prop_useRetractFeedRate) {
+                    // Ignore feed rate as we are on retracted height and use user defined feed rate
+                    if (prop_writeExtraComments) writeComment("Ignoring Fusion 360 feed rate and using defined feed rate of " + f);
+                }
+                // Save last Z position (Added by me)
+                if (z) {
+                    lastPositionZ = z;
+                }
+                // Normal case. Use feed rate specified and output next block
+                writeBlock(gMotionModal.format(1), x, y, z, f);
+            }
+        }
+    } else if (f) {
+        if (getNextRecord().isMotion()) {                      // Try not to output feed without motion
+            // Forces the output of the feedrate on the next motion block
+            feedOutput.reset();
+        } else {
+            // output next block
+            writeBlock(gMotionModal.format(1), f);
+        }
+    }
+
+}
+
+function onRapid5D(_x, _y, _z, _a, _b, _c) {                   // Handles rapid positioning moves (G00) in multi-axis operations
+
+    // Rapid positioning moves (G00) in multi-axis operations is not supported
+    error(localize("Multi-axis motion is not supported."));
+    if (prop_writeWarnings) writeComment("WARNING: Unsupported \"onRapid5D(_x, _y, _z, _a, _b, _c)\" was invoked and ignored");
+
+}
+
+function onLinear5D(_x, _y, _z, _a, _b, _c, feed) {            // Handles cutting moves (G01) in multi-axis operations
+
+    // Cutting moves (G01) in multi-axis operations is not supported
+    error(localize("Multi-axis motion is not supported."));
+    if (prop_writeWarnings) writeComment("WARNING: Unsupported \"onLinear5D(_x, _y, _z, _a, _b, _c, feed)\" was invoked and ignored");
+    
+}
+
+function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {    // Handles circular, helical, or spiral motion. Snapmaker supports only XY-plane
+
+    // Disallow radius compensation
+    if (pendingRadiusCompensation >= 0) {
+        error(localize("Radius compensation cannot be activated/deactivated for a circular move."));
+        return;
+    }
+
+    /***
+        From this point down, the remaining of this function is identical to Snapmaker original 
+        post with the exception of the reading of last Z position to variable lastPositionZ
+    ***/
+    
+    var start = getCurrentPosition();
+
+    if (isFullCircle()) {               // Full 360 degree circles
+        if (isHelical()) {
+            linearize(tolerance);
+            return;
+        }
+
+        switch (getCircularPlane()) {
+            case PLANE_XY:
+                // output next block
+                writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
+                break;
+            default:
+                linearize(tolerance);
+        }
+    } else {
+        switch (getCircularPlane()) {
+            case PLANE_XY:
+                // Save last Z position (Added by me)
+                if (z) {
+                    lastPositionZ = zOutput.format(z);
+                }
+                // output next block
+                writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), feedOutput.format(feed));
+                break;
+            default:
+                linearize(tolerance);
+        }
+    }
+
+}
+
+var mapCommand = {                                             // Identical to Snapmaker original post
+    COMMAND_STOP:                      0,
+    COMMAND_END:                       2,
+    COMMAND_SPINDLE_CLOCKWISE:         3,
+    COMMAND_SPINDLE_COUNTERCLOCKWISE:  4,
+    COMMAND_STOP_SPINDLE:              5
+};
+
+function onCommand(command) {                                  // Identical to Snapmaker original post
+
+    switch (command) {
+        case COMMAND_START_SPINDLE:
+            onCommand(tool.clockwise ? COMMAND_SPINDLE_CLOCKWISE : COMMAND_SPINDLE_COUNTERCLOCKWISE);
+            return;
+        case COMMAND_LOCK_MULTI_AXIS:
+            return;
+        case COMMAND_UNLOCK_MULTI_AXIS:
+            return;
+        case COMMAND_BREAK_CONTROL:
+            return;
+        case COMMAND_TOOL_MEASURE:
+            return;
+    }
+
+    // Handle commands that output a single M-code
+    var stringId = getCommandStringId(command);
+    var mcode = mapCommand[stringId];
+    if (mcode != undefined) {
+        // output next block
+        writeBlock(mFormat.format(mcode));
+    } else {
+        onUnsupportedCommand(command);
+    }
+
+}
+
+function onClose() {                                           // Terminates program execution in a nicely way
+
+    // Wait for moves to complete
+    if (prop_writeExtraComments) writeComment("Wait for moves to finish before running next instruction");
+    // Output next block
+    writeBlock(mFormat.format(400));
+    // Stop spindle
+    if (prop_writeExtraComments) writeComment("Stopping spindle");
+    // Output next block
+    writeBlock(mFormat.format(5));
+    // Dwell to allow the spindle to spin down
+    if (prop_writeExtraComments) writeComment(localize("Dwell for " + DWELL_TIME_SPIN_DOWN + " seconds to allow the spindle to spin down"));
+    // output next block
+    writeBlock("G4 S" + DWELL_TIME_SPIN_DOWN);
+
+}
