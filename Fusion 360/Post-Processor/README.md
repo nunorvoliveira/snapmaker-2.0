@@ -150,7 +150,7 @@ Here we will try to go through all of them with the needed explanations to go al
 
     [![Click on the *Post Library*](../../resources/02.SM2.0_F360_Post_04.png "Click on the *Post Library*")](#)
     
-    You are now on the *Post Library*. Follow steps 2-4 and your're done!
+    You are now on the *Post Library* window as on step 2. Follow steps 2-4 and your're done!
 
 ######
 
