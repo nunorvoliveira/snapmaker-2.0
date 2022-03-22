@@ -1,6 +1,8 @@
-/* POST DESCRIPTION, INFORMATION, VERSION HISTORY
+/* POST LICENSE, SOURCE, INFORMATION, DESCRIPTION, VERSION HISTORY
 
     LICENSE: This file is distributed under GNU General Public License v3.0
+
+    SOURCE: This file is publicly available at GitHub: https://github.com/nunorvoliveira/snapmaker-2.0
     
     Fusion 360 post processor configuration file for Snapmaker 2.0 (Marlin flavor)
 
