@@ -1,7 +1,7 @@
 
 # Snapmaker 2.0  
 
-On this repository I'm adding some libraries and *post-processor* for using the Snapmaker 2.0 A350T CNC module with Fusion 360.
+On this repository I'm adding some libraries and *post-processor* for using the Snapmaker 2.0 A350, A250 and A150 CNC module with Fusion 360.
 
 Inside the directory [Fusion 360](/Fusion%20360) you have all the needed files.
 
