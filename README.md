@@ -1,13 +1,13 @@
 
 # Snapmaker 2.0  
 
-On this repository I'm adding some libraries and post-processor for using the Snapmaker 2.0 A350T CNC module with Fusion 360.
+On this repository I'm adding some libraries and *post-processor* for using the Snapmaker 2.0 A350T CNC module with Fusion 360.
 
 Inside the directory [Fusion 360](/Fusion%20360) you have all the needed files.
 
 I'll try to keep all my improvements and additions here to be used by anyone who wants them.
 
-All of this is based on my Snapmaker 2.0 A350T, but many things should be compatibles with other models such as tool libraries, post-processor, etc.
+All of this is based on my Snapmaker 2.0 A350T, but many things should be compatibles with other models such as tool libraries, *post-processor*, etc.
 
 ## Background
 
@@ -19,9 +19,9 @@ Sometime later I decided to give it a go and using Snapmaker Luban revealed chal
 
 The more I worked with it, the more problems I was running into.
 
-The available tool library didn’t match the tools I had (purchased with the machine), the post processor would make some weird stuff that was causing me problems, had me break some clamps, pieced of stock wood, tools, etc...
+The available tool library didn’t match the tools I had (purchased with the machine), the *post-processor* would make some weird stuff that was causing me problems, had me break some clamps, pieced of stock wood, tools, etc...
 
-Below a small list of the things that I tried to fix when I started working on the post processor:
+Below a small list of the things that I tried to fix when I started working on the *post-processor*:
 
 - Before starting the CNC program, right after setting the _work origin_ on the machine, the tool head would go to the starting point in a straight line. This means that if the stock wood was near it would collide with it as it would not raise the Z-axis in advance, damaging it and breaking tools.
 
@@ -37,14 +37,14 @@ Please take that in consideration. All my learning and all my improvements are b
 
 ## Journey
 
-While improving the tool library by measuring them by hand, I felt the need to improve the machine settings, and then to make a post-processor that was more reliable for my needs.
+While improving the tool library by measuring them by hand, I felt the need to improve the machine settings, and then to make a *post-processor* that was more reliable for my needs.
 
-This got me digging around, learning supported G-code commands on the Snapmaker, learning about Fusion 360 post-processors, and eventually, I decided to create a completely new post-processor.
+This got me digging around, learning supported G-code commands on the Snapmaker, learning about Fusion 360 *post-processors*, and eventually, I decided to create a completely new *post-processor*.
 
 ## Decision
 
-With the decision of creating a new post-processor, I've also decided to share this with others to help anyone that could be struggling as I was on the very beginning.
-Because of this, I've tried to make the post-processor as readable as possible, I added as many comments as I could, and I've implemented all features that I can (and may continue to do so).
+With the decision of creating a new *post-processor*, I've also decided to share this with others to help anyone that could be struggling as I was on the very beginning.
+Because of this, I've tried to make the *post-processor* as readable as possible, I added as many comments as I could, and I've implemented all features that I can (and may continue to do so).
 
 I've also tried to be as detailed as possible on the machine configurations and I even added pictures of the machine with and without enclosure to make it more beautiful.
 
@@ -54,7 +54,7 @@ Even though I had pretty much zero experience with CNC, I had always been a _"so
 
 It all started in my dad's _ZX-Spectrum 48K_ and it went from there to _GW Basic_, _QBasic 1.0, 1.1, 4.5 and 7.1_, then to _Visual Basic 3, 4, 5, and 6_, _VB.NET_, some _PHP_ for some web experiences, _C#_, and now, apparently, _JavaScript_.
 
-Because of this, and on the process of learning about Fusion 360 post-processors, I've implemented some things not because I needed them, but because they were possible, they were a challenge, and someone else may find them useful.
+Because of this, and on the process of learning about Fusion 360 *post-processors*, I've implemented some things not because I needed them, but because they were possible, they were a challenge, and someone else may find them useful.
 
 ## Resources
 
@@ -71,9 +71,9 @@ As I mentioned above, I had close to zero experience in CNC. All this work was d
 
 So, I have to say it, **USE AT YOUR OWN RISK**.
 
-I tested this as much as possible and I'm working with this post on all my CNC programs with zero problems, but I'm sure could not test everything to the absolute limit. There are many types of milling in Fusion 360 and I'm only using a few of them.
+I tested this as much as possible and I'm working with this *post-processor* on all my CNC programs with zero problems, but I'm sure could not test everything to the absolute limit. There are many types of milling in Fusion 360 and I'm only using a few of them.
 
-I recommend that you post your milling both with your current trusted post-processor and with this one and compare the output. By selecting the _Write extra comments_ and _Write warnings as comments_ options pretty much all lines will have a comment, except for the ones that are not changed by the post. This should give enough info to understand what's going on.
+I recommend that you post your milling both with your current trusted *post-processor* and with this one and compare the output. By selecting the _Write extra comments_ and _Write warnings as comments_ options pretty much all lines will have a comment, except for the ones that are not changed by the post. This should give enough info to understand what's going on.
 
 ## Safety, Safety, Safety!
 
