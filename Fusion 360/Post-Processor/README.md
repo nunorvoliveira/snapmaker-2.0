@@ -134,21 +134,21 @@ Here we will try to go through all of them with the needed explanations to go al
 
 1. Following the installation of the machine, you are now ready to install a *post-processor*. To do so, on the *Machine Library* window ([How to Install a Machine in Fusion 360](../Machine%20Library#how-to-install-a-machine-in-fusion-360)) click on the small folder icon in front of the text *Post is not selected* to select a post-processor file, as demonstrated on the next image.
 
-    [![Click on the folder icon](../../resources/02.SM2.0_F360_Post_01.png "Click on the folder icon")](#)
+    [![Click on the folder icon](../../resources/tutorials/02.SM2.0_F360_Post_01.png "Click on the folder icon")](#)
 
 2. You are now on the *Post Library* window. Here, click on *Local* and then on the *Import* button.
 
-    [![Click on *Local* and then *Import*](../../resources/02.SM2.0_F360_Post_02.png "Click on *Local* and then *Import*")](#)
+    [![Click on *Local* and then *Import*](../../resources/tutorials/02.SM2.0_F360_Post_02.png "Click on *Local* and then *Import*")](#)
 
 3. Browse to the location where you have downloaded the file **SM2.0 (NrvO).cps** (or any other *\*.cps* file) with the *post-processor* and open it. The *post-processor* is now shown on the window. Click on it to select it, and hit the *Select* button on the lower right corner of the window.
     
-    [![Click on the *post-processor* and then on *Select*](../../resources/02.SM2.0_F360_Post_03.png "Click on the *post-processor* and then on *Select*")](#)
+    [![Click on the *post-processor* and then on *Select*](../../resources/tutorials/02.SM2.0_F360_Post_03.png "Click on the *post-processor* and then on *Select*")](#)
 
 4. You have now completed the *post-processor* installation.
 
     Alternatively, you can also go directly to the *Post Library* window. Change to the *Manufacture* workspace, and from the *Manage* section on the ribbon, select *Post Library* as on the image.
 
-    [![Click on the *Post Library*](../../resources/02.SM2.0_F360_Post_04.png "Click on the *Post Library*")](#)
+    [![Click on the *Post Library*](../../resources/tutorials/02.SM2.0_F360_Post_04.png "Click on the *Post Library*")](#)
     
     You are now on the *Post Library* window as on step 2. Follow steps 2-4 and your're done!
 
