@@ -3,10 +3,12 @@
 
 Here we'll have a list of features that I've consider implementing on the *post-processor* in the future, after the initial release.
 
-As they are implemented they will be checked.
+Incomplete features are identified with an :o: and features already implemented are shown with a :heavy_check_mark:.
 
-## Planned features
+## Planned features  
+<!-- #Use :o: for incomplete tasks and :heavy_check_mark: for completed ones --> 
+:o: Set G0 feed rate on option to replace G1 with G0;
 
-- [ ] Set G0 feed rate on option to replace G1 with G0;
-- [ ] Update onSection() to remove redundant code;
-- [ ] Allow user to select an option to move the table forward after CNC to make the machined part more accessible; 
+:o: Update onSection() to remove redundant code;
+
+:o: Allow user to select an option to move the table forward after CNC to make the machined part more accessible;
