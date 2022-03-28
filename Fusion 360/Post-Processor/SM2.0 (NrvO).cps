@@ -81,7 +81,7 @@
 }
 
 {                                                              // User configuration. Please change only these values on this file
-    MIN_SPINDLE_SPEED                  = "3000";               // Minimum spindle speed. The lower it getsm the less torque. 600 is possible but useless...
+    MIN_SPINDLE_SPEED                  = "3000";               // Minimum spindle speed. The lower it gets the less torque. 600 is possible but useless...
     MAX_SPINDLE_SPEED                  = "12000";              // Maximum spindle speed. On Snapmaker 2.0 this is 12000rpm
     DWELL_TIME_SPIN_UP                 = "2";                  // Dwell time for spin up in seconds. Used immediately after spindle start
     DWELL_TIME_SPIN_DOWN               = "3";                  // Dwell time for spin down in seconds. Used immediately after spindle stop
@@ -268,7 +268,12 @@ groupDefinitions = {                                           // Properties gro
     var lastPositionZ                  = -9999;
 }
 
-function writeBlock() {                                        // Writes the specified block as on Snapmaker original post
+// The writeBlock function writes a block of codes to the output NC file. It will add a sequence number to the block,
+// if sequence numbers are enabled and add an optional skip character if this is an optional operation.
+// A list of formatted codes and/or text strings are passed to the writeBlock function.
+// The code list is separated by commas, so that each code is passed as an individual argument, which allows for the
+// codes to be separated by the word separator defined by the setWordSeparator function.
+function writeBlock() {
     if (prop_showSequenceNumbers) {
         writeWords2("N" + sequenceNumber, arguments);
         sequenceNumber += prop_sequenceNumberIncrement;
@@ -281,11 +286,14 @@ function formatComment(text) {                                 // Formats commen
     return ";" + text;
 }
 
-function writeComment(text) {                                  // Output a comment
-    writeln(formatComment(text));                              // As recommended on Autodesk Post Processor Training Guide
+// The writeComment function is defined in the post processor and is used to output comments to the output NC file.
+function writeComment(text) {
+    writeln(formatComment(text));
 }
 
-function onComment(message) {                                  // Process the Manual NC Comment command
+// The onComment function is called when the Manual NC command Comment is issued.
+// It will format and output the text of the comment to the NC file.
+function onComment(message) {
 
     // Splits comments using ; as separator
     var comments = String(message).split(";");
@@ -303,7 +311,14 @@ function onComment(message) {                                  // Process the Ma
 
 }
 
-function onOpen() {                                            // Post processor initialization
+// The onOpen function is called at start of each CAM operation and can be used to define settings used in the
+// post processor and output the startup blocks:
+//   1. Define settings based on properties
+//   2. Define the multi-axis machine configuration
+//   3. Output program name and header
+//   4. Perform checks for duplicate tool numbers and work offsets
+//   5. Output initial startup codes
+function onOpen() {
 
     // Read properties from post to internal variables
     prop_writeWarnings                 = getProperty("writeWarnings");
@@ -397,6 +412,12 @@ function onOpen() {                                            // Post processor
 
 }
 
+// The onSection function is called at start of each CAM operation and controls the output of the following blocks:
+//   1. End of previous section
+//   2. Operation comments and notes
+//   3. Tool change
+//   4. Work plane
+//   5. Initial position
 function onSection() {                                         // Start of an operation
 
     // Separates this line from the read parameters from the onParameter() function
@@ -475,7 +496,12 @@ function onSection() {                                         // Start of an op
 
 }
 
-function onSectionEnd() {                                      // Ending the Previous Operation
+// The onSectionEnd function can be used to define the end of an operation, but in most post processors this is handled
+// in the onSection function. The reason for this is that different output will be generated depending on if there is a
+// tool change, WCS change, or Work Plane change and this logic is handled in the onSection function (see the
+// insertToolCall variable), though it could be handled in the onSectionEnd function if desired by referencing the
+// getNextSection and isLastSection functions.
+function onSectionEnd() {
 
     // Separates this section from next section or from bottom section
     if (prop_writeExtraComments) writeln("");
@@ -485,7 +511,10 @@ function onSectionEnd() {                                      // Ending the Pre
 
 }
 
-function forceXYZ() {                                          // Forces the output of the linear axes (X, Y, Z) on the next motion block
+// The force functions are used to force the output of the specified axes and/or feedrate the next time they are
+// supposed to be output, even if it has the same value as the previous value.
+// Forces the output of the linear axes (X, Y, Z) on the next motion block.
+function forceXYZ() {
 
     // Forces the output of the linear axe X on the next motion block
     xOutput.reset();
@@ -496,7 +525,10 @@ function forceXYZ() {                                          // Forces the out
 
 }
 
-function forceAny() {                                          // Forces all axes and the feedrate on the next motion block
+// The force functions are used to force the output of the specified axes and/or feedrate the next time they are
+// supposed to be output, even if it has the same value as the previous value.
+// Forces all axes and the feedrate on the next motion block
+function forceAny() {
 
     // Forces the output of the linear axes (X, Y, Z) on the next motion block
     forceXYZ();
@@ -505,7 +537,11 @@ function forceAny() {                                          // Forces all axe
 
 }
 
-function onDwell(seconds) {                                    // Dwell Manual NC command in seconds instead milliseconds to keep compatibility with Snapmaker original post
+// The onDwell function can be called by a Manual NC command, directly from HSM, or from the post processor.
+// The Manual NC command that calls onDwell is described in the Manual NC Commands chapter. Internal calls to
+// onDwell are usually generated when expanding a cycle. The post processor itself will call onDwell directly to
+// output a dwell block.
+function onDwell(seconds) {
 
     // Check if secconds is excessive and output a warning
     if (seconds > 99999.999) {
@@ -520,14 +556,21 @@ function onDwell(seconds) {                                    // Dwell Manual N
 
 }
 
-function onSpindleSpeed(spindleSpeed) {                        // Output changes in the spindle speed during an operation not supported by Snapmaker 2.0
+// The onSpindleSpeed function is used to output changes in the spindle speed during an operation, typically
+// from the post processor engine when expanding a cycle.
+// This is not supported by the Snapmaker Original and 2.0 and it's only implemented to prevent bad Gcode output.
+function onSpindleSpeed(spindleSpeed) {
 
     // Spindle speed change during operation is not supported
     if (prop_writeWarnings) writeComment("WARNING: Unsupported onSpindleSpeed(spindleSpeed) during toolpath was invoked and ignored");
 
 }
 
-function onParameter(param_name, param_value) {                // This will capture parameters sent to the post-processor and execute needed actions
+// Almost all parameters used for creating a machining operation in HSM are passed to the post processor.
+// Common parameters are available using built in post processor variables (currentSection, tool, cycle, etc.) as
+// well as being made available as parameters. Other parameters are passed to the onParameter function.
+// This will capture parameters sent to the post-processor and execute needed actions
+function onParameter(param_name, param_value) {
 
     // Read parameter "operation:retractHeight_value"
     // This will be used to increase the feed rate on planes at retracted height or above
@@ -536,7 +579,7 @@ function onParameter(param_name, param_value) {                // This will capt
         if (prop_writeExtraComments) writeComment("Parameter \"operation:retractHeight_value\" read successfuly with a value of " + retractHeight);
     }
 
-    // Read parameter "operation:retractHeight_value"
+    // Read parameter "operation:tool_clockwise"
     // This will be used to have the tool rotating in the correct direction. CW or CCW
     if (param_name == "operation:tool_clockwise") {
         toolClockWise = param_value;
@@ -576,14 +619,22 @@ function onParameter(param_name, param_value) {                // This will capt
 
 }
 
-function onRadiusCompensation() {                              // Called when the radius (cutter) compensation mode changes
+// The onRadiusCompensation function is called when the radius (cutter) compensation mode changes.
+// It will typically set the pending compensation mode, which will be handled in the motion functions (onRapid,
+// onLinear, onCircular, etc.). Radius compensation, when enabled in an operation, will be enabled on the move
+// approaching the part and disabled after moving off the part.
+function onRadiusCompensation() {
 
     // As recommended on Autodesk Post Processor Training Guide
     pendingRadiusCompensation = radiusCompensation;
 
 }
 
-function onRapid(_x, _y, _z) {                                 // Handles rapid positioning moves (G00) while in 3-axis mode
+// The onRapid function handles rapid positioning moves (G00) while in 3-axis mode. The tool position is passed
+// as the _x, _y, _z arguments. The format of the onRapid function is pretty basic, it will handle a change in
+// radius compensation, may determine if the rapid moves should be output at a high feedrate (due to the machine
+// making dogleg moves while in rapid mode), and output the rapid move to the NC file.
+function onRapid(_x, _y, _z) {
 
     // Format tool position for output
     var x = xOutput.format(_x);
@@ -609,7 +660,10 @@ function onRapid(_x, _y, _z) {                                 // Handles rapid 
 
 }
 
-function onLinear(_x, _y, _z, feed) {                          // Handles linear moves (G01) at a feedrate while in 3-axis mode
+// The onLinear function handles linear moves (G01) at a feedrate while in 3-axis mode. The tool position is passed
+// as the _x, _y, _z arguments. The format of the onLinear function is pretty basic, it will handle a change in
+// radius compensation and outputs the linear move to the NC file.
+function onLinear(_x, _y, _z, feed) {
 
     // Checks for retrack to overcome Fusion 360 limitation
     var isRetractedHeight = false;
@@ -682,7 +736,12 @@ function onLinear(_x, _y, _z, feed) {                          // Handles linear
 
 }
 
-function onRapid5D(_x, _y, _z, _a, _b, _c) {                   // Handles rapid positioning moves (G00) in multi-axis operations
+// The onRapid5D function handles rapid positioning moves (G00) in multi-axis operations. The tool position is
+// passed as the _x, _y, _z arguments and the rotary angles as the _a, _b, _c arguments. If a machine configuration
+// has not been defined, then _a, _b, _c contains the tool axis vector. The onRapid5D function will be called for all
+// rapid moves in a multi-axis operation, even if the move is only a 3-axis linear move without rotary movement.
+// This is not supported by the Snapmaker Original and 2.0 and it's only implemented to prevent bad Gcode output.
+function onRapid5D(_x, _y, _z, _a, _b, _c) {
 
     // Rapid positioning moves (G00) in multi-axis operations is not supported
     error(localize("Multi-axis motion is not supported."));
@@ -690,7 +749,12 @@ function onRapid5D(_x, _y, _z, _a, _b, _c) {                   // Handles rapid 
 
 }
 
-function onLinear5D(_x, _y, _z, _a, _b, _c, feed) {            // Handles cutting moves (G01) in multi-axis operations
+// The onLinear5D function handles cutting moves (G01) in multi-axis operations. The tool position is passed as the
+// _x, _y, _z arguments and the rotary angles as the _a, _b, _c arguments. If a machine configuration has not been
+// defined, then _a, _b, _c contains the tool axis vector. The onLinear5D function will be called for all cutting
+// moves in a multi-axis operation, even if the move is only a 3-axis linear move without rotary movement.
+// This is not supported by the Snapmaker Original and 2.0 and it's only implemented to prevent bad Gcode output.
+function onLinear5D(_x, _y, _z, _a, _b, _c, feed) {
 
     // Cutting moves (G01) in multi-axis operations is not supported
     error(localize("Multi-axis motion is not supported."));
@@ -698,7 +762,10 @@ function onLinear5D(_x, _y, _z, _a, _b, _c, feed) {            // Handles cuttin
     
 }
 
-function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {    // Handles circular, helical, or spiral motion. Snapmaker supports only XY-plane
+// The onCircular function is called whenever there is circular, helical, or spiral motion. The circular move can be
+// in any of the 3 standard planes, XY-plane, YZ-plane, or ZX-plane, it is up to the onCircular function to determine
+// which types of circular are valid for the machine and to correctly format the output.
+function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
     // Disallow radius compensation
     if (pendingRadiusCompensation >= 0) {
@@ -744,7 +811,7 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {    // Handles circul
 
 }
 
-var mapCommand = {                                             // Identical to Snapmaker original post
+var mapSnapmakerCommand = {
     COMMAND_STOP:                      0,
     COMMAND_END:                       2,
     COMMAND_SPINDLE_CLOCKWISE:         3,
@@ -752,6 +819,7 @@ var mapCommand = {                                             // Identical to S
     COMMAND_STOP_SPINDLE:              5
 };
 
+// The onCommand function can be called by a Manual NC command, directly from HSM, or from the post processor.
 function onCommand(command) {                                  // Identical to Snapmaker original post
 
     switch (command) {
@@ -770,9 +838,9 @@ function onCommand(command) {                                  // Identical to S
 
     // Handle commands that output a single M-code
     var stringId = getCommandStringId(command);
-    var mcode = mapCommand[stringId];
+    var mcode = mapSnapmakerCommand[stringId];
     if (mcode != undefined) {
-        // output next block
+        // Output next block
         writeBlock(mFormat.format(mcode));
     } else {
         onUnsupportedCommand(command);
@@ -780,7 +848,9 @@ function onCommand(command) {                                  // Identical to S
 
 }
 
-function onClose() {                                           // Terminates program execution in a nicely way
+// The onClose function is called at the end of the last operation, after onSectionEnd. It is used to define the end
+// of an operation, if not handled in onSectionEnd, and to output the end-of-program codes.
+function onClose() {
 
     // Wait for moves to complete
     if (prop_writeExtraComments) writeComment("Wait for moves to finish before running next instruction");
