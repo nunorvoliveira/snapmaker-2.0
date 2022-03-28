@@ -75,19 +75,22 @@
      - Starting to build first functions according to Autodesk Post Processor Training Guide.pdf
 */
 
-{                                                              // Post processor version in format year month day . version => yyyymmdd.v and author name
+// Post processor version in format year month day . version => yyyymmdd.v and author name
+{
     POST_VERSION                       = "v20220320.2";
     AUTHOR_NAME                        = "Nuno Vaz Oliveira";
 }
 
-{                                                              // User configuration. Please change only these values on this file
+// User configuration. Please change only these values on this file
+{
     MIN_SPINDLE_SPEED                  = "3000";               // Minimum spindle speed. The lower it gets the less torque. 600 is possible but useless...
     MAX_SPINDLE_SPEED                  = "12000";              // Maximum spindle speed. On Snapmaker 2.0 this is 12000rpm
     DWELL_TIME_SPIN_UP                 = "2";                  // Dwell time for spin up in seconds. Used immediately after spindle start
     DWELL_TIME_SPIN_DOWN               = "3";                  // Dwell time for spin down in seconds. Used immediately after spindle stop
 }
 
-{                                                              // Fusion 360 Kernel Settings
+// Fusion 360 Kernel Settings
+{
     allowedCircularPlanes              = 0;                                                                // Not supported by Snapmaker 2.0
     allowHelicalMoves                  = true;                                                             // Supported by Snapmaker 2.0
     capabilities                       = CAPABILITY_MILLING;                                               // All that Snapmaker 2.0 can handle
@@ -109,7 +112,8 @@
     vendorUrl                          = "http://www.snapmaker.com";
 }
 
-properties = {                                                 // Properties that are changeable on Fusion 360 post process page. New improved version with tooltips and proper writing
+// Properties that are changeable on Fusion 360 post process page. New improved version with tooltips and proper writing
+properties = {
     writeWarnings                      : {
         title                          : "Write warnings as comments",
         description                    : "Output comments with warnings for unsupported and ignored functions.",
@@ -215,7 +219,8 @@ properties = {                                                 // Properties tha
     }
 };
 
-groupDefinitions = {                                           // Properties groups for custom post properties above
+// Properties groups for custom post properties above
+groupDefinitions = {
     informationSection                 : {
         title                          : "Information Section",
         description                    : "Configure the comments added to the post. Machine, post, program, warnings, etc...",
@@ -236,7 +241,8 @@ groupDefinitions = {                                           // Properties gro
     },
 };
 
-{                                                              // Formats, Outputs, Modals and Variables
+// Formats, Outputs, Modals and Variables
+{
     // Linear output and format
     var gFormat                        = createFormat({prefix:"G", decimals:0});                           // Retrieved from examining Luban files
     var mFormat                        = createFormat({prefix:"M", decimals:0});                           // Retrieved from examining Luban files
@@ -265,7 +271,7 @@ groupDefinitions = {                                           // Properties gro
     var retractHeight                  = 9999;
 
     // This variable will track the last Z position
-    var lastPositionZ                  = -9999;
+    var lastPositionZ                  = 9999;
 }
 
 // The writeBlock function writes a block of codes to the output NC file. It will add a sequence number to the block,
@@ -282,8 +288,10 @@ function writeBlock() {
     }
 }
 
-function formatComment(text) {                                 // Formats comments to include a starting semicolon
-    return ";" + text;
+// formatComment is used to format comments. The formatComment function will remove any characters in the comment
+// that are not allowed, and add any characters that are mandatory. For Snapmakers, a semi-colon at the beginning.
+function formatComment(text) {
+    return ";" + String(text).replace(/[\(\)]/g, ""); // TODO: Need to double check if ( and ) are bad for comments
 }
 
 // The writeComment function is defined in the post processor and is used to output comments to the output NC file.
@@ -811,6 +819,7 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
 }
 
+// Define commands supported by Snapmakers
 var mapSnapmakerCommand = {
     COMMAND_STOP:                      0,
     COMMAND_END:                       2,
@@ -820,23 +829,76 @@ var mapSnapmakerCommand = {
 };
 
 // The onCommand function can be called by a Manual NC command, directly from HSM, or from the post processor.
-function onCommand(command) {                                  // Identical to Snapmaker original post
+function onCommand(command) {
 
+    // Ignore all unsupported commands and process the supported ones
     switch (command) {
-        case COMMAND_START_SPINDLE:
-            onCommand(tool.clockwise ? COMMAND_SPINDLE_CLOCKWISE : COMMAND_SPINDLE_COUNTERCLOCKWISE);
+        case COMMAND_ACTIVATE_SPEED_FEED_SYNCHRONIZATION:
             return;
-        case COMMAND_LOCK_MULTI_AXIS:
+        case COMMAND_ALARM:
             return;
-        case COMMAND_UNLOCK_MULTI_AXIS:
+        case COMMAND_ALERT:
             return;
         case COMMAND_BREAK_CONTROL:
             return;
+        case COMMAND_CALIBRATE:
+            return;
+        case COMMAN_CHANGE_PALLET:
+            return;
+        case COMMAND_CLEAN:
+            return;
+        case COMMAND_CLOSE_DOOR:
+            return;
+        case COMMAND_COOLANT_OFF:
+            return;
+        case COMMAND_COOLANT_ON:
+            return;
+        case COMMAND_DEACTIVATE_SPEED_FEED_SYNCHRONIZATION:
+            return;
+        case COMMAND_EXACT_STOP:
+            return;
+        case COMMAND_LOAD_TOOL:
+            return;
+        case COMMAND_LOCK_MULTI_AXIS:
+            return;
+        case COMMAND_MAIN_CHUCK_CLOSE:
+            return;
+        case COMMAND_MAIN_CHUCK_OPEN:
+            return;
+        case COMMAND_OPEN_DOOR:
+            return;
+        case COMMAND_OPTIONAL_STOP:
+            return;
+        case OMMAND_ORIENTATE_SPINDLE:
+            return;
+        case COMMAND_POWER_OFF:
+            return;
+        case COMMAND_POWER_ON:
+            return;
+        case COMMAND_SECONDARY_CHUCK_CLOSE:
+            return;
+        case COMMAND_SECONDARY_CHUCK_OPEN:
+            return;
+        case COMMAND_SECONDARY_SPINDLE_SYNCHRONIZATION_ACTIVATE:
+            return;
+        case COMMAND_SECONDARY_SPINDLE_SYNCHRONIZATION_DEACTIVATE:
+            return;
+        case COMMAND_START_CHIP_TRANSPORT:
+            return;
+        case COMMAND_START_SPINDLE:
+            onCommand(tool.clockwise ? COMMAND_SPINDLE_CLOCKWISE : COMMAND_SPINDLE_COUNTERCLOCKWISE);
+            return;
+        case COMMAND_STOP_CHIP_TRANSPORT:
+            return;
         case COMMAND_TOOL_MEASURE:
+            return;
+        case COMMAND_UNLOCK_MULTI_AXIS:
+            return;
+        case COMMAND_VERIFY:
             return;
     }
 
-    // Handle commands that output a single M-code
+    // Handle commands that output a single M-code and were not ignored on the switch statement above
     var stringId = getCommandStringId(command);
     var mcode = mapSnapmakerCommand[stringId];
     if (mcode != undefined) {
