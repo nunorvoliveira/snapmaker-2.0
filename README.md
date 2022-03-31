@@ -7,7 +7,7 @@ Inside the directory [Fusion 360](/Fusion%20360) you have all the needed files.
 
 I'll try to keep all my improvements and additions here to be used by anyone who wants them.
 
-All of this is based on my Snapmaker 2.0 A350T, but many things should be compatibles with other models such as tool libraries, *post-processor*, etc.
+All of this is based on my Snapmaker 2.0 A350T, but many things should be compatible with other models such as tool libraries, *post-processor*, etc.
 
 ## Background
 
