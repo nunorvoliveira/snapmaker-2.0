@@ -10,6 +10,17 @@
 
     VERSION HISTORY
     ===============
+    20220403.1
+     - Changed the ACTION_PAUSE_RAISE_Z command to raise the Z axis to machine coordinates Z=334mm instead of the
+       previous absolute value of Z=9999mm to keep the preview of the generated g-code realistic and to allow for a
+       correct time estimation for the CNC program.
+     - In addition, the speed for raising the Z axis was increased from 200mm/min to 3000mm/min and the speed for
+       lowering the Z axis after the pause was increased from 200mm/min to 1500mm/min.
+     - These 2 values are configurable on the post processor file on the "User configuration" section and are named:
+         PAUSE_RAISE_Z_FEED_RATE_UP
+         PAUSE_RAISE_Z_FEED_RATE_DOWN
+    - Big thanks to Ksdmg for pointing this out!
+
     20220320.2
      - Changed the onSection() initial positioning to move Z-axis up first, then move X-axis and Y-axis and then Z-axis down
 
@@ -87,6 +98,8 @@
     MAX_SPINDLE_SPEED                  = "12000";              // Maximum spindle speed. On Snapmaker 2.0 this is 12000rpm
     DWELL_TIME_SPIN_UP                 = "2";                  // Dwell time for spin up in seconds. Used immediately after spindle start
     DWELL_TIME_SPIN_DOWN               = "3";                  // Dwell time for spin down in seconds. Used immediately after spindle stop
+    PAUSE_RAISE_Z_FEED_RATE_UP         = 3000;                 // Feed rate to raise Z axis on ACTION_PAUSE_RAISE_Z command
+    PAUSE_RAISE_Z_FEED_RATE_DOWN       = 1500;                 // Feed rate to return Z axis to position after ACTION_PAUSE_RAISE_Z command
 }
 
 // Fusion 360 Kernel Settings
@@ -609,14 +622,16 @@ function onParameter(param_name, param_value) {
             case "ACTION_PAUSE_RAISE_Z":      // User passed command to pause the job and raise Z. Raise, M76, Un-Raise
             if (prop_writeExtraComments) writeComment("Manual NC command action \"ACTION_PAUSE_RAISE_Z\" invoked");
                 if (prop_writeExtraComments) writeComment("Raising Z");
-                // Raises Z axix to Z9999
-                writeBlock(gMotionModal.format(1), zOutput.format(9999), feedOutput.format(200));
+                // Raises Z axix to machine coordinates Z=334mm
+                writeBlock(gMotionModal.format(53), gMotionModal.format(1), zOutput.format(334), feedOutput.format(PAUSE_RAISE_Z_FEED_RATE_UP));
+                // Enforces absolute positioning coordinate system
+                writeBlock(gAbsIncModal.format(90));
                 if (prop_writeExtraComments) writeComment("Executing job pause");
                 // Write block with Pause command
                 writeBlock(mFormat.format(76));
                 if (prop_writeExtraComments) writeComment("Reverting Z to previous location");
                 // Lowers Z axix to last Z value
-                writeBlock(gMotionModal.format(1), lastPositionZ, feedOutput.format(200));
+                writeBlock(gMotionModal.format(1), lastPositionZ, feedOutput.format(PAUSE_RAISE_Z_FEED_RATE_DOWN));
                 if (prop_writeExtraComments) writeln("");
                 break;
             default:
