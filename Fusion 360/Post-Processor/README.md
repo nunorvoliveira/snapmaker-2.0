@@ -124,7 +124,7 @@ Here we will try to go through all of them with the needed explanations to go al
     
     On **SM2.0 (NrvO).cps**, at the start of the CNC program, the movement is split. First the tool raises to the safe Z height, and only then the tool is moved in X-axis and Y-axis.
 
-<sub>Improvements and Functionalities description last updated on March 21</sub><sup>st</sup><sub>, 2022</sub>
+<sub>Improvements and Functionalities description last updated on April 5</sub><sup>th</sup><sub>, 2022</sub>
 
 # How to Install a Post-Processor in Fusion 360
 
