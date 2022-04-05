@@ -89,7 +89,7 @@
 
 // Post processor version in format year month day . version => yyyymmdd.v and author name
 {
-    POST_VERSION                       = "v20220320.2";
+    POST_VERSION                       = "v20220403.1";
     AUTHOR_NAME                        = "Nuno Vaz Oliveira";
 }
 
