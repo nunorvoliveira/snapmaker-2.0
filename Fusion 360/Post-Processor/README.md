@@ -45,31 +45,27 @@ Here we will try to go through all of them with the needed explanations to go al
     }
     ```
 
-- ### Rapid Feed Rate & Fusion 360 Free Limitation
+- ### Rapid Feed Rate Control
 
-    When using Fusion 360 for Personal Use, the feedrate of rapid moves is reduced to match the feedrate of cutting moves, which can increase machining time.
+    When using Fusion 360, the feedrate of rapid moves match the feedrate of cutting moves.
     
-    On **SM2.0 (NrvO).cps** there is an option that allow us to intercept the *retract height* and use a custom *feed rate* for travels at that height, or in alternative, to replace the G1 command with a G0 command and ignore the *feed rate* usinf the predefined rapid *feed rate* for the machine.
+    On **SM2.0 (NrvO).cps** there is an option that allow us to use a custom *feed rate* on travels. As an alternative, we can also force the replace the G1 command with a G0 command and ignore the *feed rate*.
 
-- ### Fusion 360 for Personal Use Warning Message
+    This will be useful when (hopefully in a near future) the *Laser Mode* is implemented to allow the Snapmaker laser module to be controlled by the same Fusion 360 toolpath, allowing for non-planar engravings.
 
-    When using Fusion 360 for Personal Use, the message below is added to the CNC file:
-    ```
-    ;When using Fusion 360 for Personal Use, the feedrate of
-    ;rapid moves is reduced to match the feedrate of cutting
-    ;moves, which can increase machining time. Unrestricted rapid
-    ;moves are available with a Fusion 360 Subscription.
-    ```
+- ### Fusion 360 Information Message
+
+    When using Fusion 360 for Personal Use, there is an informative message added as a comment to the CNC file.
     
-    On **SM2.0 (NrvO).cps** this message is removed.
+    On **SM2.0 (NrvO).cps** this message is not added to the CNC file to keepit as clean and readable as possible.
 
 - ### Custom *Feed Rate* Option
 
-    Following the above 2 features, and to allow an easy way to select a custom *feed rate* for the rapid moves, a property has been added to the post-processor window to allow the user to select the desired value directly in Fusion 360 just before post-processing.
+    Following the above feature, and to allow an easy way to select a custom *feed rate* for the rapid moves across all toolpaths, a property has been added to the post-processor window to allow the user to select the desired value directly in Fusion 360 just before post-processing. This value will apply to all toolpaths being *post-processed* regardless of the values selected in each individual toolpath.
 
 - ### Properties UI Improvements
 
-    To make a better user interface, the custom properties (as the custom *feed rate* one) have been upgraded to a programming object. This change allows **SM2.0 (NrvO).cps** to display proper properties names and tooltips that popup when hovered with the mouse, displayig additional information and a description for each property.
+    To make a better user interface, the custom properties have been upgraded to a programming object. This change allows **SM2.0 (NrvO).cps** to display proper properties names and tooltips that popup when hovered with the mouse, displayig additional information and a description for each property.
 
 - ### Post-Processor Information
 
@@ -106,7 +102,7 @@ Here we will try to go through all of them with the needed explanations to go al
 
 - ### CC and CCW Rotation Support Added
 
-   To allow for a bigger range of tools, support for both CC and CCW rotation was implemented. User can select the rotation diretion of each tool in Fusion 360 and this is is implememted on the post processor and passed on correctly to the machine.
+   To allow for a bigger range of tools, support for both CC and CCW rotation was implemented. User can select the rotation diretion of each tool in Fusion 360 and this is is implememted on the post processor and passed on correctly to the machine. This is currently not supported by Snapmaker \(at least on A350, but is already implemented for  futureproof)
 
 - ### Comments for Program Information and Operation Name
 

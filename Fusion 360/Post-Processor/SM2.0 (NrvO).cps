@@ -45,7 +45,8 @@
 
     20220313.1
      - Added M400 before stopping the spindle to make sure all operations completed successfully
-     - Implemented tool rotation to support both CW and CCW tools as defined on Fusion 360
+     - Implemented tool rotation to support both CW and CCW tools as defined on Fusion 360. This is currently not
+       supported by Snapmaker (at least on A350, but is already implemented for futureproof)
      - Added new option on Fusion 360 to allow user to decide if program information shoud be added
      - Added new option on Fusion 360 to allow user to decide if operation name shoud be added
 
