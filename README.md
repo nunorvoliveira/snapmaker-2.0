@@ -75,13 +75,13 @@ I tested this as much as possible and I'm working with this *post-processor* on 
 
 I recommend that you post your milling both with your current trusted *post-processor* and with this one and compare the output. By selecting the _Write extra comments_ and _Write warnings as comments_ options pretty much all lines will have a comment, except for the ones that are not changed by the post. This should give enough info to understand what's going on.
 
-## Safety, Safety, Safety!
+# Safety, Safety, Safety!
 
 Regardless of all the above, please do use all safety measures. If you have the enclosure, please use it, and have the open-door sensors active. Don't go around the tool head when it's running, always use the safety glasses and all protective gear, and only change tools observing all safety recommendations. Even not being mandatory, an **emergency button** can be your best friend! Can't count the number of times I regretted not having one. It's a must! Trust me! Do as I say and not as I do!
 
 For a complete list of safety measures, please visit Snapmaker site for [Snapmaker Safety Guidelines](https://support.snapmaker.com/hc/en-us/articles/4417389067671-1-Safety-Guidelines)
 
-## Buy Me a Coffee?
+# Buy Me a Coffee?
 
 If you want to support my work, feel free to buy me a coffee via PayPal.
 
