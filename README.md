@@ -9,6 +9,12 @@ I'll try to keep all my improvements and additions here to be used by anyone who
 
 All of this is based on my Snapmaker 2.0 A350T, but many things should be compatible with other models such as tool libraries, *post-processor*, etc.
 
+Additionally, there is also a tool I've developed to create G-code for burning a Laser Test Grid with different power levels at different speeds.
+
+Please check the directory [SM Laser Test Grid](/SM%20Laser%20Test%20Grid) for additional info and downloads.
+
+![Wow](/resources/misc/smltg%2001.%20Screenshot.png "KJH")
+
 ## Background
 
 After being surprised by my wife's acquisition of the SM2.0 A350T, I started doing some 3D printing and laser engraving and kept postponing the CNC module as I had never used anything like it.
