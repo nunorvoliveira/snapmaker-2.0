@@ -10,6 +10,11 @@
 
     VERSION HISTORY
     ===============
+    20230104.1
+     - Changed order of operations. Now, the spin up operation takes place only after raising the Z axis to the initial
+       position. This prevents the material from being scratched by the tool.
+     - Big thanks to 'seppo' for submitting this idea!
+
     20220403.1
      - Changed the ACTION_PAUSE_RAISE_Z command to raise the Z axis to machine coordinates Z=334mm instead of the
        previous absolute value of Z=9999mm to keep the preview of the generated g-code realistic and to allow for a
@@ -19,7 +24,7 @@
      - These 2 values are configurable on the post processor file on the "User configuration" section and are named:
          PAUSE_RAISE_Z_FEED_RATE_UP
          PAUSE_RAISE_Z_FEED_RATE_DOWN
-    - Big thanks to Ksdmg for pointing this out!
+     - Big thanks to 'Ksdmg' for pointing this out!
 
     20220320.2
      - Changed the onSection() initial positioning to move Z-axis up first, then move X-axis and Y-axis and then Z-axis down
@@ -89,7 +94,7 @@
 
 // Post processor version in format year month day . version => yyyymmdd.v and author name
 {
-    POST_VERSION                       = "v20220403.1";
+    POST_VERSION                       = "v20230104.1";
     AUTHOR_NAME                        = "Nuno Vaz Oliveira";
 }
 
@@ -455,22 +460,6 @@ function onSection() {                                         // Start of an op
         }
     }
 
-    // Converts the spindle RPM to a correct value between MIN_SPINDLE_SPEED and MAX_SPINDLE_SPEED
-    // and converts it to a percentage
-    var tSpeed = tool.spindleRPM;
-    if (tSpeed < MIN_SPINDLE_SPEED) {
-        tSpeed = MIN_SPINDLE_SPEED;
-    }
-    if (tSpeed > MAX_SPINDLE_SPEED) {
-        tSpeed = MAX_SPINDLE_SPEED;
-    }
-    var tSpeedPercent = tSpeed * 100 / MAX_SPINDLE_SPEED;
-    if (prop_writeExtraComments) writeComment("Set tool speed to " + tool.spindleRPM + "RPM, or " + Math.ceil(tSpeedPercent) + "% in " + ((toolClockWise == 1) ? "CW" : "CCW") + " direction");
-    writeBlock(mFormat.format(4-toolClockWise) + " P" + Math.ceil(tSpeedPercent));
-    // Dwell to allow the spindle to spin up
-    if (prop_writeExtraComments) writeComment(localize("Dwell for " + DWELL_TIME_SPIN_UP + " seconds to allow the spindle to spin up"));
-    writeBlock("G4 S" + DWELL_TIME_SPIN_UP);
-
     // specifies that the tool has been retracted to the safe plane
     var retracted = false;
 
@@ -504,6 +493,22 @@ function onSection() {                                         // Start of an op
 
     // Forces the output of gMotionModal on the next call (Kept from Snapmaker original post)
     gMotionModal.reset();
+
+    // Converts the spindle RPM to a correct value between MIN_SPINDLE_SPEED and MAX_SPINDLE_SPEED
+    // and converts it to a percentage
+    var tSpeed = tool.spindleRPM;
+    if (tSpeed < MIN_SPINDLE_SPEED) {
+        tSpeed = MIN_SPINDLE_SPEED;
+    }
+    if (tSpeed > MAX_SPINDLE_SPEED) {
+        tSpeed = MAX_SPINDLE_SPEED;
+    }
+    var tSpeedPercent = tSpeed * 100 / MAX_SPINDLE_SPEED;
+    if (prop_writeExtraComments) writeComment("Set tool speed to " + tool.spindleRPM + "RPM, or " + Math.ceil(tSpeedPercent) + "% in " + ((toolClockWise == 1) ? "CW" : "CCW") + " direction");
+    writeBlock(mFormat.format(4-toolClockWise) + " P" + Math.ceil(tSpeedPercent));
+    // Dwell to allow the spindle to spin up
+    if (prop_writeExtraComments) writeComment(localize("Dwell for " + DWELL_TIME_SPIN_UP + " seconds to allow the spindle to spin up"));
+    writeBlock("G4 S" + DWELL_TIME_SPIN_UP);
 
     // Save last Z position (Added by me)
     lastPositionZ = zOutput.format(initialPosition.z);
@@ -598,14 +603,14 @@ function onParameter(param_name, param_value) {
     // This will be used to increase the feed rate on planes at retracted height or above
     if (param_name == "operation:retractHeight_value") {
         retractHeight = param_value;
-        if (prop_writeExtraComments) writeComment("Parameter \"operation:retractHeight_value\" read successfuly with a value of " + retractHeight);
+        if (prop_writeExtraComments) writeComment("Parameter \"operation:retractHeight_value\" read successfully with a value of " + retractHeight);
     }
 
     // Read parameter "operation:tool_clockwise"
     // This will be used to have the tool rotating in the correct direction. CW or CCW
     if (param_name == "operation:tool_clockwise") {
         toolClockWise = param_value;
-        if (prop_writeExtraComments) writeComment("Parameter \"operation:tool_clockwise\" read successfuly with a value of " + ((toolClockWise == 1) ? "CW" : "CCW"));
+        if (prop_writeExtraComments) writeComment("Parameter \"operation:tool_clockwise\" read successfully with a value of " + ((toolClockWise == 1) ? "CW" : "CCW"));
     }
 
     // Read parameter "action"
