@@ -10,6 +10,9 @@
 
     VERSION HISTORY
     ===============
+    20230108.1
+     - Minor cosmetic updates
+
     20230104.1
      - Changed order of operations. Now, the spin up operation takes place only after raising the Z axis to the initial
        position. This prevents the material from being scratched by the tool.
@@ -94,7 +97,7 @@
 
 // Post processor version in format year month day . version => yyyymmdd.v and author name
 {
-    POST_VERSION                       = "v20230104.1";
+    POST_VERSION                       = "v20230108.1";
     AUTHOR_NAME                        = "Nuno Vaz Oliveira";
 }
 
@@ -448,7 +451,7 @@ function onOpen() {
 function onSection() {                                         // Start of an operation
 
     // Separates this line from the read parameters from the onParameter() function
-    if (prop_writeExtraComments) writeComment("");
+    if (prop_writeExtraComments) writeln("");
 
     // Writes the comment for the current operation
     if (prop_writeOperationName) {
@@ -487,6 +490,7 @@ function onSection() {                                         // Start of an op
             // Save last Z position (Added by me)
             lastPositionZ = zOutput.format(initialPosition.z);
             // Move to starting position
+            if (prop_writeExtraComments) writeComment(localize("Raize Z axis to safe position"));
             writeBlock(gMotionModal.format(0), zOutput.format(initialPosition.z));
         }
     }
