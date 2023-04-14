@@ -10,6 +10,9 @@
 
     VERSION HISTORY
     ===============
+    20230414.1
+     - Enable machine simulation
+
     20230108.1
      - Minor cosmetic updates
 
@@ -115,7 +118,7 @@
 {
     allowedCircularPlanes              = 0;                                                                // Not supported by Snapmaker 2.0
     allowHelicalMoves                  = true;                                                             // Supported by Snapmaker 2.0
-    capabilities                       = CAPABILITY_MILLING;                                               // All that Snapmaker 2.0 can handle
+    capabilities                       = CAPABILITY_MILLING | CAPABILITY_MACHINE_SIMULATION;                                               // All that Snapmaker 2.0 can handle
     certificationLevel                 = 2;                                                                // As recommended on Autodesk Post Processor Training Guide
     description                        = "Snapmaker 2.0 (Marlin) by " + AUTHOR_NAME;                       // Shows up on Fusion 360 post window
     extension                          = ".cnc";                                                           // As exported by Luban
@@ -296,6 +299,125 @@ groupDefinitions = {
     var lastPositionZ                  = 9999;
 }
 
+
+// Start of machine configuration logic
+var compensateToolLength = false; // add the tool length to the pivot distance for nonTCP rotary heads
+var virtualTooltip = false; // translate the pivot point to the virtual tool tip for nonTCP rotary heads
+// internal variables, do not change
+var receivedMachineConfiguration;
+var tcpIsSupported;
+
+function activateMachine() {
+  // determine if TCP is supported by the machine
+  tcpIsSupported = false;
+  var axes = [machineConfiguration.getAxisU(), machineConfiguration.getAxisV(), machineConfiguration.getAxisW()];
+  for (var i in axes) {
+    if (axes[i].isEnabled() && axes[i].isTCPEnabled()) {
+      tcpIsSupported = true;
+      break;
+    }
+  }
+
+  // setup usage of multiAxisFeatures
+  useMultiAxisFeatures = getProperty("useMultiAxisFeatures") != undefined ? getProperty("useMultiAxisFeatures") :
+    (typeof useMultiAxisFeatures != "undefined" ? useMultiAxisFeatures : false);
+  useABCPrepositioning = getProperty("useABCPrepositioning") != undefined ? getProperty("useABCPrepositioning") :
+    (typeof useABCPrepositioning != "undefined" ? useABCPrepositioning : false);
+
+  if (!machineConfiguration.isMachineCoordinate(0) && (typeof aOutput != "undefined")) {
+    aOutput.disable();
+  }
+  if (!machineConfiguration.isMachineCoordinate(1) && (typeof bOutput != "undefined")) {
+    bOutput.disable();
+  }
+  if (!machineConfiguration.isMachineCoordinate(2) && (typeof cOutput != "undefined")) {
+    cOutput.disable();
+  }
+
+  if (!machineConfiguration.isMultiAxisConfiguration()) {
+    return; // don't need to modify any settings for 3-axis machines
+  }
+
+  // retract/reconfigure
+  safeRetractDistance = getProperty("safeRetractDistance") != undefined ? getProperty("safeRetractDistance") :
+    (typeof safeRetractDistance == "number" ? safeRetractDistance : 0);
+  if (machineConfiguration.performRewinds() || (typeof performRewinds == "undefined" ? false : performRewinds)) {
+    machineConfiguration.enableMachineRewinds(); // enables the rewind/reconfigure logic
+    if (typeof stockExpansion != "undefined") {
+      machineConfiguration.setRewindStockExpansion(stockExpansion);
+      if (!receivedMachineConfiguration) {
+        setMachineConfiguration(machineConfiguration);
+      }
+    }
+  }
+
+  if (machineConfiguration.isHeadConfiguration()) {
+    compensateToolLength = typeof compensateToolLength == "undefined" ? false : compensateToolLength;
+    virtualTooltip = typeof virtualTooltip == "undefined" ? false : virtualTooltip;
+    machineConfiguration.setVirtualTooltip(virtualTooltip);
+  }
+  setFeedrateMode();
+
+  if (machineConfiguration.isHeadConfiguration() && compensateToolLength) {
+    for (var i = 0; i < getNumberOfSections(); ++i) {
+      var section = getSection(i);
+      if (section.isMultiAxis()) {
+        machineConfiguration.setToolLength(getBodyLength(section.getTool())); // define the tool length for head adjustments
+        section.optimizeMachineAnglesByMachine(machineConfiguration, tcpIsSupported ? 0 : 1);
+      }
+    }
+  } else {
+    optimizeMachineAngles2(tcpIsSupported ? 0 : 1);
+  }
+}
+
+function setFeedrateMode(reset) {
+  if ((tcpIsSupported && !reset) || !machineConfiguration.isMultiAxisConfiguration()) {
+    return;
+  }
+  machineConfiguration.setMultiAxisFeedrate(
+    tcpIsSupported ? FEED_FPM : FEED_INVERSE_TIME,
+    9999.99, // maximum output value for inverse time feed rates
+    INVERSE_MINUTES, // can be INVERSE_SECONDS or DPM_COMBINATION for DPM feeds
+    0.5, // tolerance to determine when the DPM feed has changed
+    1.0 // ratio of rotary accuracy to linear accuracy for DPM calculations
+  );
+  if (!receivedMachineConfiguration || (revision < 45765)) {
+    setMachineConfiguration(machineConfiguration);
+  }
+}
+
+function getBodyLength(tool) {
+  for (var i = 0; i < getNumberOfSections(); ++i) {
+    var section = getSection(i);
+    if (tool.number == section.getTool().number) {
+      return section.getParameter("operation:tool_overallLength", tool.bodyLength + tool.holderLength);
+    }
+  }
+  return tool.bodyLength + tool.holderLength;
+}
+
+function defineMachine() {
+  if (false) { // note: setup your machine here
+    var aAxis = createAxis({coordinate:0, table:true, axis:[1, 0, 0], range:[-120, 120], preference:1, tcp:true});
+    var cAxis = createAxis({coordinate:2, table:true, axis:[0, 0, 1], range:[-360, 360], preference:0, tcp:true});
+    machineConfiguration = new MachineConfiguration(aAxis, cAxis);
+
+    setMachineConfiguration(machineConfiguration);
+    if (receivedMachineConfiguration) {
+      warning(localize("The provided CAM machine configuration is overwritten by the postprocessor."));
+      receivedMachineConfiguration = false; // CAM provided machine configuration is overwritten
+    }
+  }
+  /* home positions */
+  // machineConfiguration.setHomePositionX(toPreciseUnit(0, IN));
+  // machineConfiguration.setHomePositionY(toPreciseUnit(0, IN));
+  // machineConfiguration.setRetractPlane(toPreciseUnit(0, IN));
+}
+// End of machine configuration logic
+
+
+
 // The writeBlock function writes a block of codes to the output NC file. It will add a sequence number to the block,
 // if sequence numbers are enabled and add an optional skip character if this is an optional operation.
 // A list of formatted codes and/or text strings are passed to the writeBlock function.
@@ -349,6 +471,14 @@ function onComment(message) {
 //   4. Perform checks for duplicate tool numbers and work offsets
 //   5. Output initial startup codes
 function onOpen() {
+
+  receivedMachineConfiguration = (typeof machineConfiguration.isReceived == "function") ? machineConfiguration.isReceived() :
+  ((machineConfiguration.getDescription() != "") || machineConfiguration.isMultiAxisConfiguration());
+if (typeof defineMachine == "function") {
+  defineMachine(); // hardcoded machine configuration
+}
+activateMachine(); // enable the machine optimizations and settings
+
 
     // Read properties from post to internal variables
     prop_writeWarnings                 = getProperty("writeWarnings");
@@ -436,6 +566,8 @@ function onOpen() {
 
     // Adds a space between top section and tool paths
     if (prop_writeExtraComments) writeln("");
+    
+    activateMachine(); // enable the machine optimizations and settings
 
     // Forces the output of the linear axes (X, Y, Z) on the next motion block
     forceXYZ();
