@@ -69,7 +69,7 @@ To make this possible I had searched many hours on the internet. I have seen hun
 But there are 2 resources I was constantly going to:
 
 - G-code Reference, by Snapmaker at [G-code Reference](https://snapmaker.github.io/Documentation/gcode/G000-G001)
-- Post Processor Training Guide, by Autodesk at [Post Processor Training Guide](https://cam.autodesk.com/posts/posts/guides/Post%20Processor%20Training%20Guide.pdf)
+- Post Processor Training Guide, by Autodesk at [Post Processor Training Guide](https://cam.autodesk.com/posts/posts/guides/Post%20Processor%20Training%20Guide.pdf), and also saved here in the repository at [Post Processor Training Guide](/Fusion%20360/Post%20Processor%20Training%20Guide/Post%20Processor%20Training%20Guide.pdf)
 
 ## Disclaimer
 
